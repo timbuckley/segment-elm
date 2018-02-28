@@ -1,0 +1,20 @@
+{
+    "version": "0.0.1",
+    "summary": "Tracking library using Segment's HTTP API directly",
+    "repository": "https://github.com/user/project.git",
+    "license": "BSD3",
+    "source-directories": [
+        ".",
+        "./src"
+    ],
+    "exposed-modules": [],
+    "dependencies": {
+        "elm-lang/core": "5.1.1 <= v < 6.0.0",
+        "elm-lang/html": "2.0.0 <= v < 3.0.0",
+        "truqu/elm-base64": "2.0.0 <= v < 3.0.0",
+        "elm-lang/http": "1.0.0 <= v < 2.0.0",
+        "krisajenkins/remotedata": "4.3.1 <= v < 5.0.0"
+
+    },
+    "elm-version": "0.18.0 <= v < 0.19.0"
+}
