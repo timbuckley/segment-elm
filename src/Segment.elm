@@ -12,7 +12,7 @@ module Segment
 
 import Base64
 import Http
-import Json.Decode
+import Json.Decode as Decode
 import Json.Encode as Encode
 import Process
 import RemoteData exposing (RemoteData(..), WebData)
@@ -24,7 +24,7 @@ type alias UserId =
     String
 
 
-type alias Model msg =
+type alias Model =
     { key : String
     , userId : String
     , started : Bool
@@ -65,7 +65,7 @@ type Msg
     | UpdateApiResponseState (WebData Encode.Value)
 
 
-update : Msg -> Model -> Cmd Msg
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         HandleTick ->
@@ -130,20 +130,25 @@ update msg model =
                             let
                                 userIdIfIdentify type_ =
                                     if type_ == "identify" then
-                                        Json.Decode.field "userId" Json.Decode.string
+                                        Decode.field "userId" Decode.string
                                     else
-                                        Json.Decode.succeed ""
+                                        Decode.succeed ""
                             in
-                            Json.Decode.field "type" Json.Decode.string
-                                |> Json.Decode.andThen userIdIfIdentify
+                            Decode.field "type" Decode.string
+                                |> Decode.andThen userIdIfIdentify
                     in
                     if String.isEmpty model.userId then
-                        Json.Decode.decodeValue decoder eventValue
+                        case Decode.decodeValue decoder eventValue of
+                            Ok userId ->
+                                userId
+
+                            Err er ->
+                                ""
                     else
                         model.userId
 
                 updatedModel =
-                    { model | identifiedEvents = model.identifiedEvents :: eventWithoutUserId, userId = userIdIfIdentifyEvent }
+                    { model | identifiedEvents = eventWithoutUserId :: model.identifiedEvents, userId = userIdIfIdentifyEvent }
             in
             if model.started then
                 ( updatedModel, Cmd.none )
@@ -153,7 +158,7 @@ update msg model =
         AddAnonymousEvent event ->
             let
                 updatedModel =
-                    { model | anonymousEvents = model.anonymousEvents :: event }
+                    { model | anonymousEvents = event :: model.anonymousEvents }
             in
             if model.started then
                 ( updatedModel, Cmd.none )
@@ -226,8 +231,8 @@ createIdentifyEventMsg traits userId =
 
 
 eventAsJsonValue : String -> List ( String, Encode.Value ) -> ( String, String ) -> Encode.Value
-eventAsJsonValue type_ bodyPart userId ( field, value ) =
-    Json.Encode.object
+eventAsJsonValue type_ bodyPart ( field, value ) =
+    Encode.object
         ([ ( "type", Encode.string type_ )
          , ( field, Encode.string value )
          ]
@@ -256,7 +261,7 @@ createApiBatchCmd model eventsToBeSend =
                               )
                             ]
                     in
-                    Json.Encode.object
+                    Encode.object
                         ([ ( "batch", Encode.list eventsToBeSend ) ]
                             ++ context
                         )
@@ -267,7 +272,7 @@ createApiBatchCmd model eventsToBeSend =
         |> Cmd.map UpdateApiResponseState
 
 
-createSegmentRequest : Json.Encode.Value -> String -> Http.Request a
+createSegmentRequest : Encode.Value -> String -> Http.Request Decode.Value
 createSegmentRequest bodyValue key =
     let
         headers =
@@ -280,7 +285,7 @@ createSegmentRequest bodyValue key =
         , headers = headers
         , url = "https://api.segment.io/v1/batch"
         , body = Http.jsonBody bodyValue
-        , expect = Http.expectJson Json.Decode.value
+        , expect = Http.expectJson Decode.value
         , timeout = Nothing
         , withCredentials = False
         }
