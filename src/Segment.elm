@@ -117,7 +117,7 @@ update msg model =
             )
 
         SendApiBatch ->
-            ( model, createApiBatchCmd model )
+            update HandleTick { model | timer = 0 }
 
         AddIdentifiedEvent eventWithoutUserId ->
             let
