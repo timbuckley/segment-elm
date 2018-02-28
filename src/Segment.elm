@@ -7,6 +7,7 @@ module Segment
         , createIdentifiedPageEventMsg
         , createIdentifiedTrackEventMsg
         , createIdentifyEventMsg
+        , defaultModel
         , update
         )
 
@@ -174,7 +175,7 @@ update msg model =
                     ( { model | lastBatchRequestState = reqState }, Cmd.none )
 
 
-createIdentifiedPageEventMsg : String -> Encode.Value -> Msg
+createIdentifiedPageEventMsg : String -> List ( String, Encode.Value ) -> Msg
 createIdentifiedPageEventMsg name properties =
     let
         createIdentifiedPageEvent userId =
@@ -183,7 +184,7 @@ createIdentifiedPageEventMsg name properties =
     AddIdentifiedEvent createIdentifiedPageEvent
 
 
-createAnonymousPageEventMsg : String -> Encode.Value -> String -> Msg
+createAnonymousPageEventMsg : String -> List ( String, Encode.Value ) -> String -> Msg
 createAnonymousPageEventMsg name properties anonymousId =
     let
         createAnonymousPageEvent =
@@ -192,12 +193,12 @@ createAnonymousPageEventMsg name properties anonymousId =
     AddAnonymousEvent createAnonymousPageEvent
 
 
-createPageEvent : String -> Encode.Value -> ( String, String ) -> Encode.Value
+createPageEvent : String -> List ( String, Encode.Value ) -> ( String, String ) -> Encode.Value
 createPageEvent name properties identification =
-    eventAsJsonValue "page" [ ( "name", Encode.string name ), ( "properties", properties ) ] identification
+    eventAsJsonValue "page" [ ( "name", Encode.string name ), ( "properties", Encode.object properties ) ] identification
 
 
-createIdentifiedTrackEventMsg : String -> Encode.Value -> Msg
+createIdentifiedTrackEventMsg : String -> List ( String, Encode.Value ) -> Msg
 createIdentifiedTrackEventMsg event properties =
     let
         createIdentifiedTrackEvent userId =
@@ -206,7 +207,7 @@ createIdentifiedTrackEventMsg event properties =
     AddIdentifiedEvent createIdentifiedTrackEvent
 
 
-createAnonymousTrackEventMsg : String -> Encode.Value -> String -> Msg
+createAnonymousTrackEventMsg : String -> List ( String, Encode.Value ) -> String -> Msg
 createAnonymousTrackEventMsg event properties anonymousId =
     let
         createAnonymousTrackEvent =
@@ -215,17 +216,17 @@ createAnonymousTrackEventMsg event properties anonymousId =
     AddAnonymousEvent createAnonymousTrackEvent
 
 
-createTrackEvent : String -> Encode.Value -> ( String, String ) -> Encode.Value
+createTrackEvent : String -> List ( String, Encode.Value ) -> ( String, String ) -> Encode.Value
 createTrackEvent event properties identification =
-    eventAsJsonValue "track" [ ( "event", Encode.string event ), ( "properties", properties ) ] identification
+    eventAsJsonValue "track" [ ( "event", Encode.string event ), ( "properties", Encode.object properties ) ] identification
 
 
-createIdentifyEventMsg : Encode.Value -> String -> Msg
+createIdentifyEventMsg : List ( String, Encode.Value ) -> String -> Msg
 createIdentifyEventMsg traits userId =
     let
         --        dummy needs to stay there so the signature remains the same for all the events
         createIdentifyEvent dummy =
-            eventAsJsonValue "identify" [ ( "traits", traits ) ] ( "userId", userId )
+            eventAsJsonValue "identify" [ ( "traits", Encode.object traits ) ] ( "userId", userId )
     in
     AddIdentifiedEvent createIdentifyEvent
 
