@@ -287,7 +287,7 @@ createSegmentRequest bodyValue key =
     Http.request
         { method = "POST"
         , headers = headers
-        , url = "https://b2f8f5f7-a954-491b-a2af-22164f85b251.mock.pstmn.io/batch"
+        , url = "https://api.segment.io/v1/batch"
         , body = Http.jsonBody bodyValue
         , expect = Http.expectJson Decode.value
         , timeout = Nothing
