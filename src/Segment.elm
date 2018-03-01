@@ -35,12 +35,13 @@ type alias Model =
     , identifiedEvents : List (UserId -> Encode.Value)
     , anonymousEvents : List Encode.Value
     , eventsToBeSend : List Encode.Value
-    , timeout : Int
-    , timer : Int
+    , tick : Int
     , lastBatchRequestState : WebData Encode.Value
     }
 
 
+{-| Add Segment model to your model. Provide key, app name and optionally tick (=time between api calls in millis).
+-}
 defaultModel : String -> String -> Model
 defaultModel key app =
     { key = key
@@ -52,8 +53,7 @@ defaultModel key app =
     , identifiedEvents = []
     , anonymousEvents = []
     , eventsToBeSend = []
-    , timeout = 2
-    , timer = 2
+    , tick = 500
     , lastBatchRequestState = NotAsked
     }
 
@@ -66,19 +66,25 @@ type Msg
     | UpdateApiResponseState (WebData Encode.Value)
 
 
+{-| Create identified or anonymous events msgs with helper functions provided and update model with them. After first event is added, timers starts to tick.
+Every tick - events are send. Identified events get send only if Identify event was provided. Anonymous events will be send every time.
+You can force sending cached events with SendApiBatch msg.
+
+    HandleSegmentMsg segmentMsg ->
+        let
+            ( updatedSegmentModel, segmentCmd ) =
+                Segment.update segmentMsg model.segmentModel
+        in
+        ( { model | segmentModel = updatedSegmentModel }, Cmd.map HandleSegmentMsg segmentCmd )
+
+-}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         HandleTick ->
             let
                 sleeperCmd =
-                    Task.attempt (\_ -> HandleTick) (Process.sleep (Time.second * 1))
-
-                newTimer =
-                    if model.timer == 0 then
-                        model.timeout
-                    else
-                        model.timer - 1
+                    Task.attempt (\_ -> HandleTick) (Process.sleep (Time.millisecond * model.tick))
 
                 sendAll =
                     not (List.isEmpty model.identifiedEvents) && not (String.isEmpty model.userId)
@@ -91,7 +97,7 @@ update msg model =
                         identifiedEvents =
                             List.map (\eventWithoutId -> eventWithoutId model.userId) model.identifiedEvents
                     in
-                    if model.timer == 0 && not (String.isEmpty model.key) then
+                    if not (String.isEmpty model.key) then
                         if sendAll then
                             eventsWhichPreviouslyFailedToBeSend ++ identifiedEvents ++ model.anonymousEvents
                         else
@@ -100,7 +106,7 @@ update msg model =
                         model.eventsToBeSend
 
                 ( batchApiCmdIfNeeded, anonymousEvents, identifiedEvents ) =
-                    if model.timer == 0 && not (String.isEmpty model.key) then
+                    if not (String.isEmpty model.key) then
                         if sendAll then
                             ( createApiBatchCmd model eventsToBeSend, [], [] )
                         else if not (List.isEmpty model.anonymousEvents) then
@@ -111,8 +117,7 @@ update msg model =
                         ( Cmd.none, model.anonymousEvents, model.identifiedEvents )
             in
             ( { model
-                | timer = newTimer
-                , eventsToBeSend = eventsToBeSend
+                | eventsToBeSend = eventsToBeSend
                 , anonymousEvents = anonymousEvents
                 , identifiedEvents = identifiedEvents
                 , started = True
@@ -121,7 +126,7 @@ update msg model =
             )
 
         SendApiBatch ->
-            update HandleTick { model | timer = 0 }
+            update HandleTick model
 
         AddIdentifiedEvent eventWithoutUserId ->
             let
@@ -178,6 +183,21 @@ update msg model =
                     ( { model | lastBatchRequestState = reqState }, Cmd.none )
 
 
+{-|
+
+    let
+        segmentMsg =
+            let
+                properties =
+                    [ ( "title", Json.Encode.string "Welcome | Initech" )
+                    , ( "url", Json.Encode.string "http://www.initech.com" )
+                    ]
+            in
+            Segment.createIdentifiedPageEventMsg "Home" properties
+    in
+    update (HandleSegmentMsg segmentMsg) model
+
+-}
 createIdentifiedPageEventMsg : String -> List ( String, Encode.Value ) -> Msg
 createIdentifiedPageEventMsg name properties =
     let
@@ -187,6 +207,21 @@ createIdentifiedPageEventMsg name properties =
     AddIdentifiedEvent createIdentifiedPageEvent
 
 
+{-|
+
+    let
+        segmentMsg =
+            let
+                properties =
+                    [ ( "title", Json.Encode.string "Welcome | Initech" )
+                    , ( "url", Json.Encode.string "http://www.initech.com" )
+                    ]
+            in
+            Segment.createAnonymousPageEventMsg "Home" properties "anonymous"
+    in
+    update (HandleSegmentMsg segmentMsg) model
+
+-}
 createAnonymousPageEventMsg : String -> List ( String, Encode.Value ) -> String -> Msg
 createAnonymousPageEventMsg name properties anonymousId =
     let
@@ -201,6 +236,21 @@ createPageEvent name properties identification =
     eventAsJsonValue "page" [ ( "name", Encode.string name ), ( "properties", Encode.object properties ) ] identification
 
 
+{-|
+
+    let
+        segmentMsg =
+            let
+                properties =
+                    [ ( "registration_uuid", Json.Encode.string registrationUuid )
+                    , ( "user_email", Json.Encode.string email )
+                    ]
+            in
+            Segment.createIdentifiedTrackEventMsg "Registration Restarted" properties
+    in
+    update (HandleSegmentMsg segmentMsg) model
+
+-}
 createIdentifiedTrackEventMsg : String -> List ( String, Encode.Value ) -> Msg
 createIdentifiedTrackEventMsg event properties =
     let
@@ -210,6 +260,21 @@ createIdentifiedTrackEventMsg event properties =
     AddIdentifiedEvent createIdentifiedTrackEvent
 
 
+{-|
+
+    let
+        segmentMsg =
+            let
+                properties =
+                    [ ( "registration_uuid", Json.Encode.string registrationUuid )
+                    , ( "user_email", Json.Encode.string email )
+                    ]
+            in
+            Segment.createAnonymousTrackEventMsg "Registration Restarted" properties "anonymous"
+    in
+    update (HandleSegmentMsg segmentMsg) model
+
+-}
 createAnonymousTrackEventMsg : String -> List ( String, Encode.Value ) -> String -> Msg
 createAnonymousTrackEventMsg event properties anonymousId =
     let
@@ -224,6 +289,21 @@ createTrackEvent event properties identification =
     eventAsJsonValue "track" [ ( "event", Encode.string event ), ( "properties", Encode.object properties ) ] identification
 
 
+{-|
+
+    let
+        segmentMsg =
+            let
+                traits =
+                    [ ( "name", Json.Encode.string "Peter Gibbons" )
+                    , ( "email", Json.Encode.string ""peter@initech.com"" )
+                    ]
+            in
+            Segment.createIdentifyEventMsg traits userId
+    in
+    update (HandleSegmentMsg segmentMsg) model
+
+-}
 createIdentifyEventMsg : List ( String, Encode.Value ) -> String -> Msg
 createIdentifyEventMsg traits userId =
     let
