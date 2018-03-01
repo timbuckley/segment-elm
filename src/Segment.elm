@@ -11,6 +11,32 @@ module Segment
         , update
         )
 
+{-| Library for sending events to segment.io
+
+
+# Model
+
+@docs Model
+@docs defaultModel
+
+
+# Events msgs
+
+Create identified or anonymous events msgs. And send them to the update function.
+@docs createIdentifiedPageEventMsg, createAnonymousPageEventMsg, createIdentifiedTrackEventMsg, createAnonymousTrackEventMsg, createIdentifyEventMsg
+
+
+# Update
+
+@docs update
+
+
+# Msgs
+
+@docs Msg
+
+-}
+
 import Base64
 import Http
 import Json.Decode as Decode
@@ -25,6 +51,7 @@ type alias UserId =
     String
 
 
+{-| -}
 type alias Model =
     { key : String
     , userId : String
@@ -35,12 +62,20 @@ type alias Model =
     , identifiedEvents : List (UserId -> Encode.Value)
     , anonymousEvents : List Encode.Value
     , eventsToBeSend : List Encode.Value
-    , tick : Int
+    , tick : Float
     , lastBatchRequestState : WebData Encode.Value
     }
 
 
 {-| Add Segment model to your model. Provide key, app name and optionally tick (=time between api calls in millis).
+Default is 500.
+
+    let
+        segmentModel =
+            Segment.defaultModel "segmentKey" "applicationName"
+    in
+    {segmentModel | tick = 100}
+
 -}
 defaultModel : String -> String -> Model
 defaultModel key app =
@@ -58,6 +93,7 @@ defaultModel key app =
     }
 
 
+{-| -}
 type Msg
     = HandleTick
     | AddIdentifiedEvent (UserId -> Encode.Value)
@@ -66,7 +102,7 @@ type Msg
     | UpdateApiResponseState (WebData Encode.Value)
 
 
-{-| Create identified or anonymous events msgs with helper functions provided and update model with them. After first event is added, timers starts to tick.
+{-| After first event is added, timers starts to tick.
 Every tick - events are send. Identified events get send only if Identify event was provided. Anonymous events will be send every time.
 You can force sending cached events with SendApiBatch msg.
 
