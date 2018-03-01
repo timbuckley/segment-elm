@@ -41,14 +41,14 @@ type alias Model =
     }
 
 
-defaultModel : Model
-defaultModel =
-    { key = ""
+defaultModel : String -> String -> Model
+defaultModel key app =
+    { key = key
     , userId = ""
     , started = False
-    , app = ""
-    , name = ""
-    , version = ""
+    , app = app
+    , name = "segment-elm"
+    , version = "0.0.1"
     , identifiedEvents = []
     , anonymousEvents = []
     , eventsToBeSend = []
