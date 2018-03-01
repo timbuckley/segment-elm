@@ -91,10 +91,13 @@ update msg model =
                         identifiedEvents =
                             List.map (\eventWithoutId -> eventWithoutId model.userId) model.identifiedEvents
                     in
-                    if sendAll then
-                        eventsWhichPreviouslyFailedToBeSend ++ identifiedEvents ++ model.anonymousEvents
+                    if model.timer == 0 then
+                        if sendAll then
+                            eventsWhichPreviouslyFailedToBeSend ++ identifiedEvents ++ model.anonymousEvents
+                        else
+                            eventsWhichPreviouslyFailedToBeSend ++ model.anonymousEvents
                     else
-                        eventsWhichPreviouslyFailedToBeSend ++ model.anonymousEvents
+                        model.eventsToBeSend
 
                 ( batchApiCmdIfNeeded, anonymousEvents, identifiedEvents ) =
                     if model.timer == 0 then
@@ -284,7 +287,7 @@ createSegmentRequest bodyValue key =
     Http.request
         { method = "POST"
         , headers = headers
-        , url = "https://api.segment.io/v1/batch"
+        , url = "https://b2f8f5f7-a954-491b-a2af-22164f85b251.mock.pstmn.io/batch"
         , body = Http.jsonBody bodyValue
         , expect = Http.expectJson Decode.value
         , timeout = Nothing
