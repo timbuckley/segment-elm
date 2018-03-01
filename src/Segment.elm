@@ -91,7 +91,7 @@ update msg model =
                         identifiedEvents =
                             List.map (\eventWithoutId -> eventWithoutId model.userId) model.identifiedEvents
                     in
-                    if model.timer == 0 then
+                    if model.timer == 0 && not (String.isEmpty model.key) then
                         if sendAll then
                             eventsWhichPreviouslyFailedToBeSend ++ identifiedEvents ++ model.anonymousEvents
                         else
@@ -100,7 +100,7 @@ update msg model =
                         model.eventsToBeSend
 
                 ( batchApiCmdIfNeeded, anonymousEvents, identifiedEvents ) =
-                    if model.timer == 0 then
+                    if model.timer == 0 && not (String.isEmpty model.key) then
                         if sendAll then
                             ( createApiBatchCmd model eventsToBeSend, [], [] )
                         else if not (List.isEmpty model.anonymousEvents) then
