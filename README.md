@@ -1,39 +1,64 @@
 # Segment-elm
-Elm client for segment.io which caches the events and sends them in batch.
+Library to simplify calls to segment.io
 
-Add Segment model to your model. Provide key, app name and optionally tick (=time between api calls in millis).
-Default is 500.
+### Create identify command
 
     let
-        segmentModel =
-            Segment.defaultModel "segmentKey" "applicationName"
+        eventData =
+            let
+                traits =
+                    [ ( "email", Json.Encode.string "pgibbons@initech.com" )
+                    , ( "name", Json.Encode.string "Peter Gibbons" )
+                    ]
+            in
+            { msg = UpdateIdentifyReqStateMsg
+            , key = "segmentKey"
+            , applicationName = "myApplicationName"
+            , traits = traits
+            , userId = "1234"
+            }
     in
-    { segmentModel | tick = 100 }
+    Segment.createIdentifyCmd eventData
 
-
-Create some event and send it to the update function where it gets handled:
+### Create page command
 
     let
-        segmentMsg =
+        eventData =
             let
                 properties =
                     [ ( "title", Json.Encode.string "Welcome | Initech" )
                     , ( "url", Json.Encode.string "http://www.initech.com" )
                     ]
             in
-            Segment.createIdentifiedPageEventMsg "Home" properties
+            { msg = UpdatePageEventReqState
+            , key = "segmentKey"
+            , applicationName = "myApplicationName"
+            , name = "Home"
+            , properties = properties
+            , userId = "1234"
+            , anonymous = False
+            }
     in
-    update (HandleSegmentMsg segmentMsg) model
+    Segment.createPageEventCmd eventData
+    
+### Create track command
 
 
-After first event is added, timer starts to tick.
-Every tick - events are send. Identified events get send only if Identify event was provided. Anonymous events will be send every time.
-You can force sending cached events with SendApiBatch msg.
-
-    HandleSegmentMsg segmentMsg ->
-        let
-            ( updatedSegmentModel, segmentCmd ) =
-                Segment.update segmentMsg model.segmentModel
-        in
-        ( { model | segmentModel = updatedSegmentModel }, Cmd.map HandleSegmentMsg segmentCmd )
-
+    let
+        eventData =
+            let
+                properties =
+                    [ ( "plan", Json.Encode.string "Pro Annual" )
+                    , ( "accountType", Json.Encode.string "Facebook" )
+                    ]
+            in
+            { msg = UpdateTrackEventReqState
+            , key = "segmentKey"
+            , applicationName = "myApplicationName"
+            , name = "Registered"
+            , properties = properties
+            , userId = "someAnonymousId"
+            , anonymous = True
+            }
+    in
+    Segment.createTrackEventCmd eventData
