@@ -174,7 +174,7 @@ createCallApiCmd msg key applicationName eventFields =
                     ""
 
                 Just ( key, value ) ->
-                    value
+                    Result.withDefault "" (Json.Decode.decodeValue Json.Decode.string value)
 
         request =
             let
@@ -217,4 +217,4 @@ contextName =
 
 contextVersion : String
 contextVersion =
-    "2.0.0"
+    "2.0.1"
