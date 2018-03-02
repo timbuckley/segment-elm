@@ -174,7 +174,7 @@ createCallApiCmd msg key applicationName eventFields =
                     ""
 
                 Just ( key, value ) ->
-                    Result.withDefault "" (Json.Decode.decodeValue Json.Decode.string value)
+                    Result.withDefault "" (Decode.decodeValue Decode.string value)
 
         request =
             let
