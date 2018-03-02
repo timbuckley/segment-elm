@@ -1,5 +1,5 @@
 {
-    "version": "2.0.1",
+    "version": "2.0.2",
     "summary": "Tracking library using Segment's HTTP API directly",
     "repository": "https://github.com/GlobalWebIndex/segment-elm.git",
     "license": "ISC",
